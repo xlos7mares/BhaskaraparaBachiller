@@ -392,5 +392,5 @@ with st.expander("Glosario: los nombres matemáticos"):
         "- **Vértice** y **eje de simetría**: el punto más alto o más bajo de la parábola y la recta vertical que la parte en dos.")
 
 st.markdown(
-    '<div class="credit">Desarrollador de la App<br><b>Leonardo Olivera</b><br>Bachiller en Agronomía</div>',
+    '<div class="credit">Desarrollador App<br><b>Leonardo Olivera</b><br>Bachiller en Agronomía</div>',
     unsafe_allow_html=True)
