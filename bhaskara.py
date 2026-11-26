@@ -137,4 +137,32 @@ def render(n):
             st.latex(rf"x_1 = \dfrac{{-b + \sqrt{{\Delta}}}}{{2a}} = {latex(x1)} \approx {float(x1):.3f}")
             st.latex(rf"x_2 = \dfrac{{-b - \sqrt{{\Delta}}}}{{2a}} = {latex(x2)} \approx {float(x2):.3f}")
         st.info("Las soluciones son los puntos donde la parábola cruza el eje x.")
-    elif n ==
+    elif n == 6:
+        st.subheader("Paso 6 · Verificá")
+        for i, r in enumerate([x1] if D == 0 else [x1, x2], 1):
+            val = simplify(a * r**2 + b * r + c)
+            st.latex(rf"a x_{i}^2 + b x_{i} + c = {latex(val)}")
+        st.success("Da 0 en las dos: ¡están bien! Forma factorizada:")
+        st.latex(rf"{latex(a)}\,(x - {col(x1, '#0ea5e9')})(x - {col(x2, '#0ea5e9')}) = 0")
+
+
+izq, der = st.columns([1, 1.3])
+with izq:
+    if ver_todo:
+        for n in range(1, TOTAL + 1):
+            render(n)
+            st.divider()
+    else:
+        st.progress(paso / TOTAL, text=f"Paso {paso} de {TOTAL}")
+        render(paso)
+        b1, b2 = st.columns(2)
+        if b1.button("← Anterior", disabled=paso == 1, use_container_width=True):
+            st.session_state.paso -= 1
+            st.rerun()
+        if b2.button("Siguiente →", disabled=paso == TOTAL, type="primary", use_container_width=True):
+            st.session_state.paso += 1
+            st.rerun()
+with der:
+    st.plotly_chart(grafico(paso), use_container_width=True,
+                    config={"scrollZoom": True, "displaylogo": False})
+    st.caption("Podés hacer zoom con la rueda y mover el gráfico arrastrando.")
