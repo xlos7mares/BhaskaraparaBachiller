@@ -57,7 +57,8 @@ h1,h2,h3{font-family:'Bricolage Grotesque',sans-serif!important}
 .st-key-ca:hover,.st-key-cb:hover,.st-key-cc:hover{transform:translateY(-4px);border-color:var(--k);
   box-shadow:0 10px 40px -10px var(--k)}
 [data-testid="stNumberInput"] label p{color:var(--k)!important;font-weight:700;font-size:.95rem}
-div[data-baseweb="input"],div[data-baseweb="base-input"]{background:rgba(0,0,0,.35)!important;
+[data-testid="stNumberInput"] div,[data-testid="stNumberInput"] input{background:transparent!important}
+[data-testid="stNumberInput"] div[data-baseweb="input"]{background:rgba(0,0,0,.45)!important;
   border-radius:14px!important;border:1.5px solid var(--k)!important;transition:box-shadow .25s}
 div[data-baseweb="input"]:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--k) 30%,transparent),0 0 28px var(--k)}
 [data-testid="stNumberInput"] input{color:var(--k)!important;font-weight:800;font-size:1.7rem;
@@ -97,6 +98,13 @@ div[data-baseweb="input"]:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,va
   border-left:3px solid #ffe14a;color:#f3f0d0}
 .ok{margin-top:12px;padding:12px 14px;border-radius:14px;background:rgba(184,255,44,.1);
   border:1px solid #b8ff2c;color:#e6ffb3;box-shadow:0 0 24px -8px #b8ff2c}
+.warn,.sign{margin:12px 0 4px;padding:12px 14px;border-radius:14px;line-height:1.5}
+.warn{background:rgba(255,79,216,.09);border-left:3px solid #ff4fd8;color:#ffd6f6}
+.warn b{color:#ff4fd8;text-shadow:0 0 10px #ff4fd8aa}
+.sign{background:rgba(34,227,255,.09);border-left:3px solid #22e3ff;color:#d4f8ff}
+.sign b{color:#22e3ff;text-shadow:0 0 10px #22e3ffaa}
+.calc{display:inline-block;margin-top:8px;padding:6px 12px;border-radius:10px;background:rgba(0,0,0,.4);
+  border:1px dashed #22e3ff;color:#22e3ff;font-family:ui-monospace,monospace;font-size:1.05rem}
 .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .stApp .katex{font-size:1.4em}.stApp .katex *{text-shadow:0 0 10px currentColor}
 
@@ -190,7 +198,7 @@ TOTAL = len(names)
 firma = (a_in, b_in, c_in)
 if st.session_state.get("firma") != firma:
     st.session_state.firma, st.session_state.paso = firma, 1
-paso = st.session_state.paso
+paso = min(st.session_state.paso, TOTAL)
 
 st.markdown('<div class="stepper">' + "".join(
     f'<div class="pill {"on" if i == paso else "done" if i < paso else ""}"><b>{i}</b>{n}</div>'
@@ -200,7 +208,15 @@ st.markdown('<div class="stepper">' + "".join(
 # ---------- Gráfico ----------
 def grafico(paso):
     fa, fb, fc, fvx, fvy = map(float, (a, b, c, vx, vy))
-    half = max([6] + [abs(r - fvx) + 2 for r in raices])
+    span = max(abs(fvy), abs(fc), 4)
+    lo, hi = min(0, fvy, fc) - span * .4, max(0, fvy, fc) + span * .4
+    if fa > 0:
+        hi = max(hi, fvy + span * 1.5)
+    else:
+        lo = min(lo, fvy - span * 1.5)
+    alto = (hi - fvy) if fa > 0 else (fvy - lo)
+    half = max([2.5, 1.2 * math.sqrt(alto / abs(fa)), abs(fvx) + 1.5] + [abs(r - fvx) + 1.5 for r in raices])
+    half = min(half, 40)
     xs = np.linspace(fvx - half, fvx + half, 600)
     ys = fa * xs**2 + fb * xs + fc
     f = go.Figure()
@@ -226,43 +242,62 @@ def grafico(paso):
         for i, r in enumerate(raices, 1):
             lbl = f"x{'₁₂'[i-1]} = {r:.2f}" if len(raices) > 1 else f"x = {r:.2f}"
             punto(r, 0, lbl, HOT, "top left" if i == 1 else "top right")
-    span = max(abs(fvy), abs(fc), 4)
-    lo, hi = min(0, fvy, fc) - span * .4, max(0, fvy, fc) + span * .4
-    if fa > 0:
-        hi = max(hi, fvy + span * 1.5)
-    else:
-        lo = min(lo, fvy - span * 1.5)
     ax = dict(showgrid=True, gridcolor="rgba(255,255,255,.07)", zeroline=True,
               zerolinecolor="rgba(255,255,255,.75)", zerolinewidth=2, color="#aab3e6")
     f.update_layout(height=520, margin=dict(l=8, r=8, t=8, b=8), dragmode="pan", showlegend=False,
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,.25)",
                     hoverlabel=dict(bgcolor="#14183a", font_color="#fff"),
-                    xaxis=dict(range=[fvx - half, fvx + half], dtick=1, **ax), yaxis=dict(range=[lo, hi], **ax))
+                    xaxis=dict(range=[fvx - half, fvx + half], dtick=1 if half <= 8 else None, **ax), yaxis=dict(range=[lo, hi], **ax))
     return f
 
 
 # ---------- Contenido de cada paso ----------
+def p(v):
+    return f"({fmt(v)})" if v < 0 else fmt(v)
+
+
+def box(kind, title, body):
+    st.markdown(f'<div class="{kind}"><b>{title}</b><br>{body}</div>', unsafe_allow_html=True)
+
+
 def render(n):
+    q = 4 * a * c
     if n == 1:
-        head(1, "Identificá a, b y c", "Son los tres números que acompañan a la x. Cada uno tendrá su color hasta el final.")
+        head(1, "Identificá los coeficientes", "Cada letra de ax² + bx + c = 0 tiene un nombre matemático. Cada una conserva su color hasta el final.")
         st.markdown(
             f'<div class="trio"><div class="tcard" style="--k:{CA}"><div class="big">a = {fmt(a)}</div>'
-            '<small>va con <b>x²</b></small></div>'
+            '<small><b>coeficiente cuadrático</b><br>va con x²</small></div>'
             f'<div class="tcard" style="--k:{CB}"><div class="big">b = {fmt(b)}</div>'
-            '<small>va con <b>x</b></small></div>'
+            '<small><b>coeficiente lineal</b><br>va con x</small></div>'
             f'<div class="tcard" style="--k:{CC}"><div class="big">c = {fmt(c)}</div>'
-            '<small>está <b>solo</b>, sin x</small></div></div>'
-            f'<div class="hint">Mirá el gráfico: {chip("c", CC)} es el punto donde la parábola corta el eje vertical. '
-            'Fijate que el signo viaja con el número.</div>', unsafe_allow_html=True)
+            '<small><b>término independiente</b><br>está solo, sin x</small></div></div>', unsafe_allow_html=True)
+        neg = [nm for nm, v in (("a", a), ("b", b), ("c", c)) if v < 0]
+        box("warn", "El signo viaja con el número",
+            "Si ves −5x, entonces b = −5 (no 5). " +
+            (f"En tu ecuación son negativos: <b>{', '.join(neg)}</b>." if neg else "En tu ecuación los tres son positivos."))
+        st.markdown(f'<div class="hint">En el gráfico, {chip("c", CC)} es donde la parábola corta el eje vertical.</div>',
+                    unsafe_allow_html=True)
     elif n == 2:
-        head(2, "Calculá el discriminante Δ", "Es una cuenta corta que te avisa cuántas soluciones tiene la ecuación, antes de resolverla.")
+        head(2, "Calculá el discriminante Δ", "Δ = b² − 4ac. Se calcula con la fórmula escrita, luego con los números entre paréntesis, y al final se resuelve.")
         st.latex(r"\Delta = b^2 - 4\,a\,c")
         st.latex(rf"\Delta = {col(b, CB)}^2 - 4\cdot{col(a, CA)}\cdot{col(c, CC)}")
-        st.latex(rf"\Delta = {latex(b**2)} - {col(4*a*c, '#ffffff')} = {col(D, HOT)}")
-        st.markdown(f'<div class="hint">Resultado: {chip("Δ = " + fmt(D), HOT)}. '
-                    'Primero elevás b al cuadrado, después restás 4·a·c.</div>', unsafe_allow_html=True)
+        st.latex(rf"\Delta = {latex(b**2)} - {col(q, '#ffffff')}")
+        st.latex(rf"\Delta = {latex(b**2)} + {latex(-q)} = {col(D, HOT)}" if q < 0 else rf"\Delta = {col(D, HOT)}")
+        box("warn", "Orden de las operaciones",
+            "1° potencias · 2° multiplicaciones · 3° sumas y restas. Los números negativos van siempre entre paréntesis.")
+        if b < 0:
+            st.latex(rf"({latex(b)})^2 = {latex(b**2)} \qquad \text{{pero}} \qquad -{latex(abs(b))}^2 = {latex(-b**2)}")
+            box("warn", "Cuidado con los paréntesis",
+                f"Si escribís −{fmt(abs(b))}² la calculadora eleva solo el {fmt(abs(b))} y da <b>{fmt(-b**2)}</b>. "
+                f"Con ({fmt(b)})² da <b>+{fmt(b**2)}</b>: un número al cuadrado nunca es negativo.")
+        if q < 0:
+            box("sign", "Acá cambia un signo",
+                f"4·a·c = {fmt(q)} es negativo y la fórmula lo resta: −({fmt(q)}) = <b>+{fmt(-q)}</b>. «Menos por menos, más».")
+        elif q > 0:
+            box("sign", "Signos sin cambio", f"4·a·c = {fmt(q)} es positivo, así que simplemente se resta.")
+        st.markdown(f'<div class="hint">Resultado: {chip("Δ = " + fmt(D), HOT)}</div>', unsafe_allow_html=True)
     elif n == 3:
-        head(3, "¿Qué te dice Δ?", "El signo del discriminante decide cuántas veces la parábola toca el eje horizontal.")
+        head(3, "¿Qué te dice Δ?", "El discriminante decide cuántas veces la parábola toca el eje horizontal.")
         cls = ["on" if D > 0 else "", "on" if D == 0 else "", "on" if D < 0 else ""]
         st.markdown(
             f'<div class="meter" style="--k:{HOT}"><div class="{cls[0]}">Δ &gt; 0<br>dos soluciones</div>'
@@ -271,31 +306,51 @@ def render(n):
             '(línea punteada) en el gráfico.</div>', unsafe_allow_html=True)
     elif n == 4 and D < 0:
         head(4, "Conclusión", "No hace falta seguir calculando.")
-        st.markdown(f'<div class="hint">Como {chip("Δ &lt; 0", HOT)} no existe la raíz cuadrada de un número negativo '
-                    'en los reales. La parábola nunca toca el eje x, así que <b>no hay solución real</b>.</div>',
+        st.markdown(f'<div class="hint">Como {chip("Δ &lt; 0", HOT)} el radicando es negativo y no existe la raíz cuadrada '
+                    'de un negativo en los reales. La parábola nunca toca el eje x: <b>no hay solución real</b>.</div>',
                     unsafe_allow_html=True)
     elif n == 4:
-        head(4, "Reemplazá en la fórmula", "Ahora ponés a, b y Δ en su lugar, respetando los signos.")
-        st.latex(r"x = \dfrac{-b \pm \sqrt{\Delta}}{2a}")
+        head(4, "Reemplazá en la fórmula resolvente", "Arriba está el numerador y abajo el denominador. Se reemplaza cuidando paréntesis y signos.")
+        st.latex(r"x=\dfrac{\overbrace{-b\pm\sqrt{\Delta}}^{\text{numerador (arriba)}}}"
+                 r"{\underbrace{2a}_{\text{denominador (abajo)}}}")
         st.latex(rf"x = \dfrac{{-{col(b, CB)} \pm \sqrt{{{col(D, HOT)}}}}}{{2\cdot{col(a, CA)}}}")
         st.latex(rf"x = \dfrac{{{latex(-b)} \pm {latex(sqrt(D))}}}{{{latex(2*a)}}}")
-        st.markdown(f'<div class="hint">El símbolo {chip("±", HOT)} significa que hacés la cuenta dos veces: '
-                    'una con + y otra con −.</div>', unsafe_allow_html=True)
-    elif n == 5:
-        head(5, "Calculá las soluciones", "Una cuenta con el signo + y otra con el signo −.")
-        if D == 0:
-            st.latex(rf"x = \dfrac{{{latex(-b)}}}{{{latex(2*a)}}} = {col(x1, HOT)}")
+        if b != 0:
+            box("sign", "Acá cambia un signo: −b es el opuesto de b",
+                f"b = {fmt(b)}, entonces −b = −({fmt(b)}) = <b>{fmt(-b)}</b>. "
+                + ("Como b era negativo, pasa a positivo." if b < 0 else "Como b era positivo, pasa a negativo."))
         else:
-            st.latex(rf"x_1 = \dfrac{{{latex(-b)} + {latex(sqrt(D))}}}{{{latex(2*a)}}} = {col(x1, HOT)}")
-            st.latex(rf"x_2 = \dfrac{{{latex(-b)} - {latex(sqrt(D))}}}{{{latex(2*a)}}} = {col(x2, HOT)}")
-        st.markdown(f'<div class="hint">Son los puntos {chip("amarillos", HOT)} del gráfico: '
-                    'donde la parábola cruza el eje x.</div>', unsafe_allow_html=True)
+            box("sign", "−b cuando b = 0", "El opuesto de 0 es 0: acá no hay cambio de signo.")
+        box("warn", "La barra de fracción es un paréntesis invisible",
+            "Divide <b>todo</b> el numerador (−b ± √Δ), no solo el último término. En la calculadora se escribe así:<br>"
+            f'<span class="calc">(-{p(b)} + √{fmt(D)}) ÷ (2·{p(a)})</span>')
+        box("sign", "El símbolo ±", "Significa «más o menos»: hacés el cálculo dos veces, una sumando √Δ y otra restándolo.")
+    elif n == 5:
+        head(5, "Calculá arriba y abajo", "Primero resolvé el numerador, después el denominador y recién al final dividí.")
+        sq, den = sqrt(D), 2 * a
+        if D == 0:
+            st.latex(rf"x = \dfrac{{{latex(-b)}}}{{{latex(den)}}} = {col(x1, HOT)}")
+        else:
+            for sg, nm, r in (("+", "x_1", x1), ("-", "x_2", x2)):
+                nu = simplify(-b + sq) if sg == "+" else simplify(-b - sq)
+                st.markdown(f'{chip("con " + ("+" if sg == "+" else "−"), HOT)} '
+                            f'numerador: <b>{fmt(-b)} {"+" if sg == "+" else "−"} {fmt(sq) if sq.is_Rational else latex(sq)} = {fmt(nu) if nu.is_Rational else latex(nu)}</b>'
+                            f' · denominador: <b>{fmt(den)}</b>', unsafe_allow_html=True)
+                st.latex(rf"{nm} = \dfrac{{{latex(-b)} {sg} {latex(sq)}}}{{{latex(den)}}} = \dfrac{{{latex(nu)}}}{{{latex(den)}}} = {col(r, HOT)}")
+        box("warn", "Cuidado al restar",
+            f"Con el signo − se resta √Δ al numerador: {fmt(-b)} − {fmt(sqrt(D)) if sqrt(D).is_Rational else latex(sqrt(D))}. "
+            "Si el numerador queda negativo, el signo − es parte de la solución.")
+        st.markdown(f'<div class="hint">Son los puntos {chip("amarillos", HOT)} del gráfico: donde la parábola cruza el eje x.</div>',
+                    unsafe_allow_html=True)
     elif n == 6:
         head(6, "Verificá", "Reemplazá cada solución en la ecuación original: tiene que dar 0.")
         for r in ([x1] if D == 0 else [x1, x2]):
             st.latex(rf"{col(a, CA)}\cdot({latex(r)})^2 + {col(b, CB)}\cdot({latex(r)}) + {col(c, CC)} "
                      rf"= {latex(simplify(a*r**2 + b*r + c))}")
-        st.markdown('<div class="ok">¡Comprobado! Y ahora la ecuación también se puede escribir factorizada:</div>',
+        box("warn", "Paréntesis al verificar",
+            "Al reemplazar x por un número, ponelo entre paréntesis. El cuadrado se aplica al número con su signo, "
+            "y después se resuelve en el orden: potencias, multiplicaciones, sumas y restas.")
+        st.markdown('<div class="ok">¡Comprobado! Ahora la ecuación también se puede escribir factorizada:</div>',
                     unsafe_allow_html=True)
         st.latex(rf"{latex(a)}\,(x - {col(x1, HOT)})(x - {col(x2, HOT)}) = 0")
 
@@ -321,3 +376,14 @@ with der.container(key="graphcard"):
         leg += chip("soluciones", HOT)
     st.markdown(f'<div class="legend">{leg}</div>', unsafe_allow_html=True)
     st.caption("Rueda del mouse para zoom, arrastrá para mover el gráfico.")
+
+with st.expander("Glosario: los nombres matemáticos"):
+    st.markdown(
+        "- **Ecuación cuadrática** (o de segundo grado): ax² + bx + c = 0, con a ≠ 0.\n"
+        "- **Coeficiente cuadrático (a)**, **coeficiente lineal (b)** y **término independiente (c)**.\n"
+        "- **Discriminante (Δ)**: b² − 4ac. Dice cuántas soluciones reales hay.\n"
+        "- **Radicando**: lo que está dentro de la raíz, acá Δ.\n"
+        "- **Numerador** (arriba de la fracción) y **denominador** (abajo).\n"
+        "- **Opuesto de b (−b)**: el mismo número con el signo cambiado.\n"
+        "- **Raíces o soluciones**: los valores de x que hacen cierta la ecuación.\n"
+        "- **Vértice** y **eje de simetría**: el punto más alto o más bajo de la parábola y la recta vertical que la parte en dos.")
