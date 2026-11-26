@@ -105,6 +105,9 @@ div[data-baseweb="input"]:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,va
 .sign b{color:#22e3ff;text-shadow:0 0 10px #22e3ffaa}
 .calc{display:inline-block;margin-top:8px;padding:6px 12px;border-radius:10px;background:rgba(0,0,0,.4);
   border:1px dashed #22e3ff;color:#22e3ff;font-family:ui-monospace,monospace;font-size:1.05rem}
+.credit{margin:36px auto 12px;max-width:560px;text-align:center;padding:14px 20px;border-radius:18px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);color:#aab3e6;line-height:1.5;transition:box-shadow .25s,border-color .25s}
+.credit:hover{border-color:#ffe14a;box-shadow:0 0 30px -8px #ffe14a}
+.credit b{color:#ffe14a;font-family:'Bricolage Grotesque',sans-serif;font-size:1.15rem;text-shadow:0 0 12px #ffe14a88}
 .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .stApp .katex{font-size:1.4em}.stApp .katex *{text-shadow:0 0 10px currentColor}
 
@@ -387,3 +390,7 @@ with st.expander("Glosario: los nombres matemáticos"):
         "- **Opuesto de b (−b)**: el mismo número con el signo cambiado.\n"
         "- **Raíces o soluciones**: los valores de x que hacen cierta la ecuación.\n"
         "- **Vértice** y **eje de simetría**: el punto más alto o más bajo de la parábola y la recta vertical que la parte en dos.")
+
+st.markdown(
+    '<div class="credit">Desarrollador de la App<br><b>Leonardo Olivera</b><br>Bachiller en Agronomía</div>',
+    unsafe_allow_html=True)
