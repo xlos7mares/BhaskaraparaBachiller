@@ -241,15 +241,21 @@ st.markdown(
 # ---------- Gráfico ----------
 def grafico(paso):
     fa, fb, fc, fvx, fvy = map(float, (a, b, c, vx, vy))
-    span = max(abs(fvy), abs(fc), 4.0)
-    lo, hi = min(0.0, fvy, fc) - span * 0.4, max(0.0, fvy, fc) + span * 0.4
+    base_min = min(0.0, fvy, fc)
+    base_max = max(0.0, fvy, fc)
+    rango_y = max(base_max - base_min, 4.0)
+    pad = max(rango_y * 0.22, 2.0)
+
     if fa > 0:
-        hi = max(hi, fvy + span * 1.5)
+        lo = base_min - pad
+        hi = max(base_max, fvy + rango_y * 0.55) + pad
     else:
-        lo = min(lo, fvy - span * 1.5)
-    alto = (hi - fvy) if fa > 0 else (fvy - lo)
+        hi = base_max + pad
+        lo = min(base_min, fvy - rango_y * 0.55) - pad
+
+    alto = max(hi - fvy if fa > 0 else fvy - lo, 0.2)
     half = max(
-        [2.5, 1.2 * math.sqrt(max(alto, 0.1) / abs(fa)), abs(fvx) + 1.5]
+        [2.5, 1.2 * math.sqrt(alto / abs(fa)), abs(fvx) + 1.5]
         + [abs(r - fvx) + 1.5 for r in raices]
     )
     half = min(half, 40.0)
