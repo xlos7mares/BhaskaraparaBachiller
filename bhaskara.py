@@ -1,5 +1,4 @@
 import math
-from urllib.parse import quote
 
 import numpy as np
 import plotly.graph_objects as go
@@ -33,16 +32,12 @@ def logo(main, inner, ray, sw=2.2):
     )
 
 
-WM = "data:image/svg+xml," + quote(logo("#fff", "#fff", "#fff", 1.2))
-
 CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Figtree:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@600&display=swap');
 .stApp{background:radial-gradient(900px 500px at 8% -5%,#3b22a055,transparent),
   radial-gradient(800px 500px at 100% 10%,#00d4ff1f,transparent),#080b21;
   color:#e8ecff;font-family:'Figtree',sans-serif}
-.stApp::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.07;
-  background:url("__WM__") no-repeat right -120px bottom -140px/720px}
 header[data-testid="stHeader"]{background:transparent}
 [data-testid="stSidebar"],[data-testid="collapsedControl"]{display:none}
 .block-container{max-width:1250px;padding-top:2.2rem;padding-bottom:3.5rem;position:relative;z-index:1}
@@ -132,7 +127,7 @@ div[data-baseweb="input"]:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,va
 [data-testid="stBaseButton-secondary"]:hover{border-color:#22e3ff!important;color:#22e3ff!important;
   box-shadow:0 0 22px -4px #22e3ff}
 </style>
-""".replace("__WM__", WM)
+"""
 st.markdown(CSS, unsafe_allow_html=True)
 
 
@@ -253,7 +248,10 @@ def grafico(paso):
     else:
         lo = min(lo, fvy - span * 1.5)
     alto = (hi - fvy) if fa > 0 else (fvy - lo)
-    half = max([2.5, 1.2 * math.sqrt(max(alto, 0.1) / abs(fa)), abs(fvx) + 1.5] + [abs(r - fvx) + 1.5 for r in raices])
+    half = max(
+        [2.5, 1.2 * math.sqrt(max(alto, 0.1) / abs(fa)), abs(fvx) + 1.5]
+        + [abs(r - fvx) + 1.5 for r in raices]
+    )
     half = min(half, 40.0)
     xs = np.linspace(fvx - half, fvx + half, 600)
     ys = fa * xs**2 + fb * xs + fc
@@ -282,7 +280,7 @@ def grafico(paso):
         )
     )
 
-    def punto(x, y, txt, color, pos="top right", bgcolor="rgba(8,11,33,0.78)"):
+    def punto(x, y, txt, color, pos="top right"):
         f.add_trace(
             go.Scatter(
                 x=[x],
@@ -300,28 +298,12 @@ def grafico(paso):
                 mode="markers+text",
                 text=[txt],
                 textposition=pos,
-                textfont=dict(color=color, size=13),
+                textfont=dict(color=color, size=14),
                 showlegend=False,
                 marker=dict(size=11, color=color, line=dict(color="#fff", width=2)),
                 hovertemplate=txt + "<extra></extra>",
             )
         )
-        if bgcolor:
-            f.add_annotation(
-                x=x,
-                y=y,
-                text=txt,
-                showarrow=False,
-                font=dict(color=color, size=13),
-                bgcolor=bgcolor,
-                bordercolor=color,
-                borderwidth=1,
-                borderpad=3,
-                xshift=34 if "right" in pos else (-34 if "left" in pos else 0),
-                yshift=18 if "top" in pos else (-20 if "bottom" in pos else 0),
-            )
-            # Oculta el texto duplicado de mode="markers+text" cuando usamos annotation con fondo
-            f.data[-2].mode = "markers"
 
     c_pos = "top left" if fvx >= 0 else "top right"
     punto(0, fc, f"c = {fc:g}", CC, c_pos)
